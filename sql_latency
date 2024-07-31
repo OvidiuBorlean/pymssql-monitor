@@ -1,0 +1,41 @@
+import pymssql  
+import os
+import time
+import datetime
+#from datetime import datetime
+import prometheus_client as prom
+
+
+def checkAzureSql(server, user, password, database):
+  try:
+    now = datetime.datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    conn = pymssql.connect(server=server, user=user, password=password, database=database)
+    cursor = conn.cursor()
+    conn.close()
+  except:
+    print(dt_string + " " + "A MSSQLDriverException has been caught.")
+    file1= open("azsqltest.log","a")
+    content = dt_string + " " + "A MSSQLDriverException has been caught."
+    file1.write(content)
+    file1.write("\n")
+    file1.close()
+if __name__ == '__main__':
+  gauge = prom.Gauge('sql_ep_latency', 'ElasticPool Connection Latency')
+  print("Starting AzureSQL Connectivity Check:...")
+  HOST = os.getenv('HOST')
+  DB_USER = os.getenv("DB_USER")
+  DB_PASSWORD = os.environ.get('DB_PASSWORD')
+  DB_NAME  = os.environ.get('DB_NAME')
+  INTERVAL = os.environ.get('INTERVAL')
+  prom.start_http_server(9090)
+  while True:
+    now = datetime.datetime.now()
+    time_formatted = now.strftime("%Y-%m-%d %H:%M:%S")
+    t = time.process_time()
+    checkAzureSql(HOST, DB_USER, DB_PASSWORD, DB_NAME)
+    elapsed_time = time.process_time() - t
+    t_value = float(elapsed_time)
+    print(t_value)
+    gauge.set(t_value)
+    time.sleep(int(INTERVAL))
